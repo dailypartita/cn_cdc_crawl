@@ -5,7 +5,7 @@
 
 本项目是一个专门用于爬取、处理和分析中国疾控中心（CDC）发布的传染病监测数据的自动化工具。该工具可以从中国CDC官网批量下载并处理新冠疫情数据和急性呼吸道传染病监测报告，将其转换为结构化数据用于后续分析。
 
-**本项目主要为 [China-COVID-19-Forecast-Hub](https://github.com/China-COVID-19-Forecast-Hub) 项目提供标准化的疫情监测数据**，确保预测模型能够获得及时、准确、格式统一的COVID-19监测数据。
+**本项目主要为 [China-COVID-19-Forecast-Hub](https://github.com/dailypartita/China-COVID-19-Forecast-Hub) 项目提供标准化的疫情监测数据**，确保预测模型能够获得及时、准确、格式统一的COVID-19监测数据。
 
 ![fig1](model/2025-09-02.jpg)
 
@@ -214,7 +214,13 @@ cn_cdc_data/
 
 ### `covid_only_updated_surveillance_data.csv` 
 
-此文件是专门为 China-COVID-19-Forecast-Hub 项目定制的COVID-19监测数据文件，包含按周汇总的新冠病毒监测数据。该文件采用标准化的时间序列格式，便于疫情预测模型使用。
+此文件是专门为 [China-COVID-19-Forecast-Hub](https://github.com/dailypartita/China-COVID-19-Forecast-Hub) 项目定制的COVID-19监测数据文件，包含按周汇总的新冠病毒监测数据。该文件采用标准化的时间序列格式，便于疫情预测模型使用。
+
+**关于China-COVID-19-Forecast-Hub项目**：
+- 这是一个协作预测中心，专门收集和评估中国哨点医院流感样病例(ILI)中SARS-CoV-2阳性率的实时预测
+- 项目于2025年8月21日开始运行，参与者需要在每周三北京时间23:59前提交预测
+- 该平台为比较预测模型和为公共卫生决策提供循证见解提供服务
+- 项目联系邮箱：yang_kaixin@gzlab.ac.cn
 
 #### 数据列详细说明
 
@@ -238,9 +244,15 @@ cn_cdc_data/
 #### 使用说明
 
 1. **时间序列分析**：可以使用 `reference_date` 作为时间索引进行趋势分析
-2. **预测模型输入**：`ili_percent` 和 `sari_percent` 是预测模型的核心输入特征
+2. **预测模型输入**：`ili_percent` 和 `sari_percent` 是预测模型的核心输入特征  
 3. **周次对齐**：`report_week` 可用于与其他数据源的周度数据进行对齐
 4. **数据验证**：建议使用前检查日期连续性和数值合理性
+5. **Forecast Hub对接**：
+   - 数据格式完全符合China-COVID-19-Forecast-Hub的输入要求
+   - `reference_date`对应预测的基准日期（每周六）
+   - `target_end_date`对应预测目标周的结束日期  
+   - 数据每周更新，支持实时预测和回顾性分析（nowcasting）
+   - 如需将此数据用于其他研究或发表，请联系 yang_kaixin@gzlab.ac.cn 获取数据源归属信息
 
 ## 📊 输出数据格式
 
