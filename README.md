@@ -5,6 +5,8 @@
 
 本项目是一个专门用于爬取、处理和分析中国疾控中心（CDC）发布的传染病监测数据的自动化工具。该工具可以从中国CDC官网批量下载并处理新冠疫情数据和急性呼吸道传染病监测报告，将其转换为结构化数据用于后续分析。
 
+**本项目主要为 [China-COVID-19-Forecast-Hub](https://github.com/China-COVID-19-Forecast-Hub) 项目提供标准化的疫情监测数据**，确保预测模型能够获得及时、准确、格式统一的COVID-19监测数据。
+
 ![fig1](model/2025-09-02.jpg)
 
 ## 📊 项目概述
@@ -187,23 +189,62 @@ cn_cdc_data/
 ├── save_web_to_pdf.py          # 网页批量保存为PDF
 ├── convert_pdf_to_md.py        # PDF转Markdown转换器
 ├── extract_data_from_md.py     # 结构化数据提取工具
+├── extract_surveillance_data.py # 专用监测数据提取工具
 ├── 
 ├── # URL列表文件
 ├── url_covid19.txt             # 新冠疫情数据URL列表
-├── url_surveillance.txt        # 急性呼吸道传染病监测URL列表
+├── url_surveillance_history.txt # 历史监测数据URL列表
+├── url_surveillance_new.txt    # 最新监测数据URL列表
 ├── 
 ├── # 数据目录
 ├── pdf_covid19/                # 新冠疫情PDF文件
 ├── pdf_surveillance/           # 监测数据PDF文件
 ├── md_covid19/                 # 新冠疫情Markdown文件
 ├── md_surveillance/            # 监测数据Markdown文件
+├── model/                      # 模型相关文件
+│   ├── cn_cdc_covid19_model.ipynb # COVID-19数据分析模型
+│   └── 2025-09-02.jpg         # 示例图片
 ├── 
-└── cn_cdc_surveillance.csv     # 最终输出的结构化数据
+├── # 输出文件
+├── cn_cdc_surveillance.csv     # 综合监测数据输出
+└── covid_only_updated_surveillance_data.csv # COVID-19专用数据（为China-COVID-19-Forecast-Hub提供）
 ```
+
+## 📋 COVID-19专用数据文件说明
+
+### `covid_only_updated_surveillance_data.csv` 
+
+此文件是专门为 China-COVID-19-Forecast-Hub 项目定制的COVID-19监测数据文件，包含按周汇总的新冠病毒监测数据。该文件采用标准化的时间序列格式，便于疫情预测模型使用。
+
+#### 数据列详细说明
+
+| 列名 | 数据类型 | 描述 | 示例值 | 备注 |
+|------|----------|------|--------|------|
+| `reference_date` | 日期 (YYYY-MM-DD) | 监测周的起始日期（周一） | 2025-09-01 | 每个监测周的参考起点 |
+| `target_end_date` | 日期 (YYYY-MM-DD) | 监测周的结束日期（周日） | 2025-09-07 | 与reference_date构成完整的监测周 |
+| `report_week` | 整数 | 年度报告周次 | 36 | 按照ISO周历系统计算的周次 |
+| `pathogen` | 文本 | 病原体名称 | 新型冠状病毒 | 目前专门针对COVID-19，统一为"新型冠状病毒" |
+| `ili_percent` | 浮点数 | 门急诊流感样病例(ILI)阳性率 | 6.8 | 单位：百分比(%)，表示门急诊就诊的流感样病例中新冠阳性的比例 |
+| `sari_percent` | 浮点数 | 住院严重急性呼吸道感染(SARI)病例阳性率 | 3.7 | 单位：百分比(%)，表示住院SARI病例中新冠阳性的比例 |
+
+#### 数据特点
+
+- **时间覆盖范围**：从2024年11月开始的连续监测数据
+- **更新频率**：每周更新，通常在监测周结束后3-7天发布
+- **数据来源**：基于全国哨点医院的监测网络
+- **质量控制**：所有数据均经过中国CDC的标准化验证流程
+- **格式标准**：严格按照 China-COVID-19-Forecast-Hub 项目的数据规范设计
+
+#### 使用说明
+
+1. **时间序列分析**：可以使用 `reference_date` 作为时间索引进行趋势分析
+2. **预测模型输入**：`ili_percent` 和 `sari_percent` 是预测模型的核心输入特征
+3. **周次对齐**：`report_week` 可用于与其他数据源的周度数据进行对齐
+4. **数据验证**：建议使用前检查日期连续性和数值合理性
 
 ## 📊 输出数据格式
 
-最终输出的CSV文件包含以下字段：
+除了上述COVID-19专用文件外，系统还可以输出包含多种病原体的综合监测数据CSV文件，包含以下字段：
 
 | 字段名 | 描述 | 示例 |
 |--------|------|------|
