@@ -9,6 +9,16 @@
 
 ![fig1](model/2025-09-02.jpg)
 
+### 📈 交互式数据可视化
+
+**[🔗 点击查看实时交互式图表](https://dailypartita.github.io/cn_cdc_data/covid19_interactive.html)** ✨
+
+> 注：上方的交互式图表支持：
+> - 🖱️ 缩放、平移、悬停查看详细数据
+> - 📊 切换不同的平滑窗口（1周/3周/5周/7周）
+> - 📅 快速选择时间范围（近4周/近13周/近6月/全部）
+> - 💾 导出为高分辨率 PNG 图片
+
 ## 📊 项目概述
 
 本项目主要处理两类数据：
@@ -84,12 +94,12 @@ export OPENROUTER_API_KEY="your-api-key-here"
 ```bash
 # 步骤1: 爬取网页并保存为PDF
 uv run save_web_to_pdf.py \
-    url_surveillance.txt -o pdf_surveillance \
+    config/url_surveillance_new.txt -o pdf \
     --format A1 --margin 10mm \
     -c 6 --wait-until load
 
 # 步骤2: 转换PDF为Markdown
-uv run convert_pdf_to_md.py pdf_surveillance -o md_surveillance \
+uv run convert_pdf_to_md.py pdf -o md \
   --server http://10.22.16.132:8011 \
   --lang ch --backend pipeline --parse-method auto \
   --formula-enable true --table-enable true \
@@ -97,7 +107,7 @@ uv run convert_pdf_to_md.py pdf_surveillance -o md_surveillance \
 
 # 步骤3: 提取结构化数据
 export OPENROUTER_API_KEY="your-api-key"
-uv run python extract_data_from_md.py md_surveillance -o cn_cdc_surveillance.csv --no-llm --debug
+uv run python extract_surveillance_data.py md -o data/updated_surveillance_data.csv --no-llm --debug
 ```
 
 #### 2. 新冠疫情数据处理
@@ -105,12 +115,12 @@ uv run python extract_data_from_md.py md_surveillance -o cn_cdc_surveillance.csv
 ```bash
 # 爬取并保存PDF
 uv run save_web_to_pdf.py \
-    url_covid19.txt -o pdf_covid19 \
+    config/url_covid19.txt -o pdf \
     --format A1 --margin 10mm \
     -c 6 --wait-until load
 
 # 转换为Markdown
-uv run convert_pdf_to_md.py pdf_covid19 -o md_covid19 \
+uv run convert_pdf_to_md.py pdf -o md \
   --server http://10.22.16.132:8011 \
   --lang ch --backend pipeline --parse-method auto \
   --formula-enable true --table-enable true \
@@ -177,37 +187,75 @@ uv run python extract_data_from_md.py [Markdown目录] -o [CSV输出] [选项]
 - 支持门急诊流感样病例（ILI）和住院严重急性呼吸道感染（SARI）两类数据
 - 智能处理百分比和病例数数据
 
+#### 4. `generate_interactive_plot.py` - 生成交互式图表
+
+```bash
+uv run python generate_interactive_plot.py
+```
+
+**功能说明：**
+- 从 `data/covid_only_updated_surveillance_data.csv` 读取COVID-19监测数据
+- 生成包含 ILI 和 SARI 阳性率的 Plotly 交互式图表
+- 支持多个平滑窗口（1周/3周/5周/7周）切换
+- 输出独立的 HTML 文件到 `docs/covid19_interactive.html`
+- 适用于 GitHub Pages 托管展示
+
+**交互功能：**
+- 🖱️ 鼠标悬停显示详细数据点信息
+- 📊 点击按钮切换不同的数据平滑窗口
+- 🔍 缩放和平移查看特定时间段
+- 📅 快速选择预设时间范围
+- 💾 导出为高分辨率 PNG 图片
+
 ## 📁 项目结构
 
 ```
 cn_cdc_data/
-├── README.md                    # 本文档
-├── pyproject.toml              # 项目配置和依赖
-├── run.sh                      # 完整工作流示例脚本
-├── 
-├── # 核心工具脚本
-├── save_web_to_pdf.py          # 网页批量保存为PDF
-├── convert_pdf_to_md.py        # PDF转Markdown转换器
-├── extract_data_from_md.py     # 结构化数据提取工具
-├── extract_surveillance_data.py # 专用监测数据提取工具
-├── 
-├── # URL列表文件
-├── url_covid19.txt             # 新冠疫情数据URL列表
-├── url_surveillance_history.txt # 历史监测数据URL列表
-├── url_surveillance_new.txt    # 最新监测数据URL列表
-├── 
-├── # 数据目录
-├── pdf_covid19/                # 新冠疫情PDF文件
-├── pdf_surveillance/           # 监测数据PDF文件
-├── md_covid19/                 # 新冠疫情Markdown文件
-├── md_surveillance/            # 监测数据Markdown文件
-├── model/                      # 模型相关文件
-│   ├── cn_cdc_covid19_model.ipynb # COVID-19数据分析模型
-│   └── 2025-09-02.jpg         # 示例图片
-├── 
-├── # 输出文件
-├── cn_cdc_surveillance.csv     # 综合监测数据输出
-└── covid_only_updated_surveillance_data.csv # COVID-19专用数据（为China-COVID-19-Forecast-Hub提供）
+├── README.md                        # 项目文档
+├── pyproject.toml                  # 项目配置和依赖
+├── requirements.txt                # Python依赖列表
+├── .gitignore                      # Git忽略配置
+│
+├── 核心脚本
+├── save_web_to_pdf.py              # 网页批量保存为PDF
+├── convert_pdf_to_md.py            # PDF转Markdown转换器
+├── extract_data_from_md.py         # 结构化数据提取工具
+├── extract_surveillance_data.py    # 专用监测数据提取工具
+├── generate_interactive_plot.py    # 生成交互式Plotly图表
+├── preview_interactive.sh          # 本地预览脚本
+├── run.sh                          # 完整工作流示例
+│
+├── config/                         # 配置文件
+│   ├── paths.py                        # 路径配置
+│   ├── url_covid19.txt                 # 新冠疫情数据URL列表
+│   ├── url_surveillance_history.txt    # 历史监测数据URL
+│   └── url_surveillance_new.txt        # 最新监测数据URL
+│
+├── data/                           # 处理后的数据
+│   ├── covid_only_updated_surveillance_data.csv  # COVID-19专用数据
+│   ├── updated_surveillance_data.csv             # 完整监测数据
+│   └── cn_cdc_surveillance.csv                   # 综合监测数据
+│
+├── pdf/                            # 所有PDF文件（原始数据）
+├── md/                             # 所有Markdown文件（转换后）
+│
+├── notebooks/                      # Jupyter笔记本
+│   ├── cn_cdc_covid19_model.ipynb      # COVID-19数据分析模型
+│   └── test.ipynb                      # 测试笔记本
+│
+├── model/                          # 模型和图表
+│   └── 2025-09-02.jpg                 # 示例图片
+│
+├── docs/                           # 文档和GitHub Pages
+│   ├── covid19_interactive.html        # 交互式图表页面
+│   ├── index.html                      # 首页
+│   ├── SETUP.md                        # GitHub Pages设置指南
+│   ├── INTERACTIVE_CHART_GUIDE.md      # 交互图表完整指南
+│   └── QUICKSTART_INTERACTIVE.md       # 快速启动指南
+│
+└── .github/                        # GitHub Actions
+    └── workflows/
+        └── deploy-docs.yml             # 自动部署工作流
 ```
 
 ## 📋 COVID-19专用数据文件说明
@@ -341,6 +389,46 @@ uv run convert_pdf_to_md.py input.pdf --server http://your-mineru-server:port
 - 减少并发数：`--workers 2`
 - 分批处理文件
 - 增加系统虚拟内存
+
+## 🌐 启用交互式图表（GitHub Pages）
+
+要在你的 GitHub 仓库中展示交互式图表，请按照以下步骤操作：
+
+### 快速启用
+
+1. **推送代码到 GitHub**：
+   ```bash
+   git add .
+   git commit -m "添加交互式图表"
+   git push origin main
+   ```
+
+2. **在 GitHub 仓库设置中启用 Pages**：
+   - 进入仓库的 **Settings** → **Pages**
+   - **Source** 选择 `GitHub Actions`
+   - 保存设置
+
+3. **访问交互式图表**：
+   - 部署完成后（约1-2分钟），访问：
+   - `https://<你的用户名>.github.io/<仓库名>/covid19_interactive.html`
+
+详细设置说明请查看 [docs/SETUP.md](docs/SETUP.md)
+
+### 更新图表
+
+当数据更新后，重新生成并推送：
+
+```bash
+# 生成新的交互式图表
+uv run python generate_interactive_plot.py
+
+# 提交更改
+git add docs/covid19_interactive.html data/covid_only_updated_surveillance_data.csv
+git commit -m "更新监测数据"
+git push origin main
+```
+
+GitHub Actions 会自动重新部署更新后的图表。
 
 ## 🤝 贡献指南
 
