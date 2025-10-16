@@ -43,7 +43,7 @@ jobs:
 
       - name: 生成交互式图表
         run: |
-          python generate_interactive_plot.py
+          python src/generate_interactive_plot.py
 
       - name: 配置 GitHub Pages
         uses: actions/configure-pages@v5

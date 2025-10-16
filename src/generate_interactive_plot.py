@@ -14,9 +14,13 @@ import pandas as pd
 import numpy as np
 from datetime import date
 import plotly.graph_objects as go
-import plotly.io as pio
 
-from config.paths import COVID_ONLY_DATA, INTERACTIVE_HTML
+try:
+    from config.paths import COVID_ONLY_DATA, INTERACTIVE_HTML
+except ImportError:
+    # 如果导入失败，使用相对路径
+    COVID_ONLY_DATA = None
+    INTERACTIVE_HTML = None
 
 def generate_interactive_plot(csv_path, output_html):
     """

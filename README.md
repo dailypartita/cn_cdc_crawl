@@ -7,17 +7,7 @@
 
 **本项目主要为 [China-COVID-19-Forecast-Hub](https://github.com/dailypartita/China-COVID-19-Forecast-Hub) 项目提供标准化的疫情监测数据**，确保预测模型能够获得及时、准确、格式统一的COVID-19监测数据。
 
-![fig1](model/2025-09-02.jpg)
-
-### 📈 交互式数据可视化
-
-**[🔗 点击查看实时交互式图表](https://dailypartita.github.io/cn_cdc_data/covid19_interactive.html)** ✨
-
-> 注：上方的交互式图表支持：
-> - 🖱️ 缩放、平移、悬停查看详细数据
-> - 📊 切换不同的平滑窗口（1周/3周/5周/7周）
-> - 📅 快速选择时间范围（近4周/近13周/近6月/全部）
-> - 💾 导出为高分辨率 PNG 图片
+![](./docs/demo.jpg)
 
 ## 📊 项目概述
 
@@ -93,13 +83,13 @@ export OPENROUTER_API_KEY="your-api-key-here"
 
 ```bash
 # 步骤1: 爬取网页并保存为PDF
-uv run save_web_to_pdf.py \
+uv run python src/save_web_to_pdf.py \
     config/url_surveillance_new.txt -o pdf \
     --format A1 --margin 10mm \
     -c 6 --wait-until load
 
 # 步骤2: 转换PDF为Markdown
-uv run convert_pdf_to_md.py pdf -o md \
+uv run python src/convert_pdf_to_md.py pdf -o md \
   --server http://10.22.16.132:8011 \
   --lang ch --backend pipeline --parse-method auto \
   --formula-enable true --table-enable true \
@@ -107,20 +97,20 @@ uv run convert_pdf_to_md.py pdf -o md \
 
 # 步骤3: 提取结构化数据
 export OPENROUTER_API_KEY="your-api-key"
-uv run python extract_surveillance_data.py md -o data/updated_surveillance_data.csv --no-llm --debug
+uv run python src/extract_surveillance_data.py md -o data/updated_surveillance_data.csv --no-llm --debug
 ```
 
 #### 2. 新冠疫情数据处理
 
 ```bash
 # 爬取并保存PDF
-uv run save_web_to_pdf.py \
+uv run python src/save_web_to_pdf.py \
     config/url_covid19.txt -o pdf \
     --format A1 --margin 10mm \
     -c 6 --wait-until load
 
 # 转换为Markdown
-uv run convert_pdf_to_md.py pdf -o md \
+uv run python src/convert_pdf_to_md.py pdf -o md \
   --server http://10.22.16.132:8011 \
   --lang ch --backend pipeline --parse-method auto \
   --formula-enable true --table-enable true \
@@ -132,7 +122,7 @@ uv run convert_pdf_to_md.py pdf -o md \
 #### 1. `save_web_to_pdf.py` - 网页转PDF工具
 
 ```bash
-uv run save_web_to_pdf.py [URL文件] -o [输出目录] [选项]
+uv run python src/save_web_to_pdf.py [URL文件] -o [输出目录] [选项]
 ```
 
 **主要参数：**
@@ -153,7 +143,7 @@ uv run save_web_to_pdf.py [URL文件] -o [输出目录] [选项]
 #### 2. `convert_pdf_to_md.py` - PDF转Markdown工具
 
 ```bash
-uv run convert_pdf_to_md.py [PDF路径] -o [输出目录] [选项]
+uv run python src/convert_pdf_to_md.py [PDF路径] -o [输出目录] [选项]
 ```
 
 **主要参数：**
@@ -170,7 +160,7 @@ uv run convert_pdf_to_md.py [PDF路径] -o [输出目录] [选项]
 #### 3. `extract_data_from_md.py` - 数据提取工具
 
 ```bash
-uv run python extract_data_from_md.py [Markdown目录] -o [CSV输出] [选项]
+uv run python src/extract_data_from_md.py [Markdown目录] -o [CSV输出] [选项]
 ```
 
 **主要参数：**
@@ -190,7 +180,7 @@ uv run python extract_data_from_md.py [Markdown目录] -o [CSV输出] [选项]
 #### 4. `generate_interactive_plot.py` - 生成交互式图表
 
 ```bash
-uv run python generate_interactive_plot.py
+uv run python src/generate_interactive_plot.py
 ```
 
 **功能说明：**
@@ -216,14 +206,12 @@ cn_cdc_data/
 ├── requirements.txt                # Python依赖列表
 ├── .gitignore                      # Git忽略配置
 │
-├── 核心脚本
-├── save_web_to_pdf.py              # 网页批量保存为PDF
-├── convert_pdf_to_md.py            # PDF转Markdown转换器
-├── extract_data_from_md.py         # 结构化数据提取工具
-├── extract_surveillance_data.py    # 专用监测数据提取工具
-├── generate_interactive_plot.py    # 生成交互式Plotly图表
-├── preview_interactive.sh          # 本地预览脚本
-├── run.sh                          # 完整工作流示例
+├── src/                            # 源代码目录
+│   ├── save_web_to_pdf.py              # 网页批量保存为PDF
+│   ├── convert_pdf_to_md.py            # PDF转Markdown转换器
+│   ├── extract_data_from_md.py         # 结构化数据提取工具
+│   ├── extract_surveillance_data.py    # 专用监测数据提取工具
+│   └── generate_interactive_plot.py    # 生成交互式Plotly图表
 │
 ├── config/                         # 配置文件
 │   ├── paths.py                        # 路径配置
@@ -248,8 +236,6 @@ cn_cdc_data/
 │
 ├── docs/                           # 文档和GitHub Pages
 │   ├── covid19_interactive.html        # 交互式图表页面
-│   ├── index.html                      # 首页
-│   ├── SETUP.md                        # GitHub Pages设置指南
 │   ├── INTERACTIVE_CHART_GUIDE.md      # 交互图表完整指南
 │   └── QUICKSTART_INTERACTIVE.md       # 快速启动指南
 │
@@ -420,7 +406,7 @@ uv run convert_pdf_to_md.py input.pdf --server http://your-mineru-server:port
 
 ```bash
 # 生成新的交互式图表
-uv run python generate_interactive_plot.py
+uv run python src/generate_interactive_plot.py
 
 # 提交更改
 git add docs/covid19_interactive.html data/covid_only_updated_surveillance_data.csv
