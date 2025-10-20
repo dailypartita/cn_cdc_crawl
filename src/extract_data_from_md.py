@@ -280,6 +280,10 @@ def main():
     )
     df = df.sort_values("_sort_date", ascending=False, kind="mergesort").drop(columns=["_sort_date"])
 
+    # 确保输出目录存在
+    output_path = Path(args.out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    
     df.to_csv(args.out, index=False, encoding="utf-8-sig")
     print(f"✅ Done. {len(df)} rows -> {args.out}")
 

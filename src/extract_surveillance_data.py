@@ -323,6 +323,8 @@ def main():
     
     # 保存完整数据
     output_path = Path(args.output)
+    # 确保输出目录存在
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_path, index=False, encoding='utf-8-sig')
     print(f"✅ 提取完成！共 {len(df)} 行数据 -> {output_path}")
     
