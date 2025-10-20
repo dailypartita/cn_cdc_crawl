@@ -273,9 +273,6 @@ cn_cdc_data/
 │   │       └── {file_id}.csv
 │   └── ...                            # 其他日期的数据
 │
-├── pdf/                            # 所有PDF文件（原始数据，历史）
-├── md/                             # 所有Markdown文件（转换后，历史）
-│
 ├── notebooks/                      # Jupyter笔记本
 │   ├── cn_cdc_covid19_model.ipynb      # COVID-19数据分析模型
 │   └── test.ipynb                      # 测试笔记本

@@ -219,17 +219,12 @@ def main():
         
         # 创建临时目录
         update_dir = Path(args.update_dir)
-        temp_pdf_dir = update_dir / "pdf"
-        temp_md_dir = update_dir / "md"
-        temp_data_dir = update_dir / "data"
+        temp_dir = update_dir / "tmp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
         
-        temp_pdf_dir.mkdir(parents=True, exist_ok=True)
-        temp_md_dir.mkdir(parents=True, exist_ok=True)
-        temp_data_dir.mkdir(parents=True, exist_ok=True)
-        
-        pdf_file = temp_pdf_dir / f"{file_id}.pdf"
-        md_file = temp_md_dir / f"{file_id}.md"
-        csv_file = temp_data_dir / f"{file_id}.csv"
+        pdf_file = temp_dir / f"{file_id}.pdf"
+        md_file = temp_dir / f"{file_id}.md"
+        csv_file = temp_dir / f"{file_id}.csv"
         
         if not args.skip_download:
             # 步骤1: 下载网页为PDF
