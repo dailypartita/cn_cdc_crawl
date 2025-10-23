@@ -15,7 +15,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, ShortCircuitOperator
 from airflow.operators.bash import BashOperator
 from airflow.models import Variable
 
@@ -421,7 +421,8 @@ def fetch_new_links_task(**context):
 def check_new_links(**context):
     """
     检查是否有新链接需要处理
-    如果没有新链接，提前结束流程
+    如果没有新链接，提前结束流程（返回 False）
+    如果有新链接，继续处理（返回 True）
     """
     has_new_links = context['task_instance'].xcom_pull(
         key='has_new_links', 
@@ -434,10 +435,10 @@ def check_new_links(**context):
     )
     
     if not has_new_links or link_count == 0:
-        print("⚠️  没有新链接需要处理")
-        return 'skip_processing'
+        print("⚠️  没有新链接需要处理，终止后续流程")
+        return False  # 返回 False 将跳过所有下游任务
     
-    print(f"✅ 有 {link_count} 个新链接需要处理")
+    print(f"✅ 有 {link_count} 个新链接需要处理，继续执行流程")
     
     # 将新链接传递给后续任务
     new_links = context['task_instance'].xcom_pull(
@@ -448,7 +449,7 @@ def check_new_links(**context):
     context['task_instance'].xcom_push(key='url_list', value=new_links)
     context['task_instance'].xcom_push(key='url_count', value=link_count)
     
-    return 'continue_processing'
+    return True  # 返回 True 继续执行下游任务
 
 
 def download_web_to_pdf(**context):
@@ -845,7 +846,7 @@ with DAG(
     dag_id='cdc_covid19_data_update',
     default_args=DEFAULT_ARGS,
     description='自动更新中国疾控中心COVID-19监测数据',
-    schedule='0 10 * * 3',  # 每周三上午10点执行
+    schedule='0 0 * * 5',  # 每周五0点执行
     start_date=datetime(2025, 10, 1),
     catchup=False,
     tags=['cdc', 'covid19', 'data_pipeline'],
@@ -857,8 +858,8 @@ with DAG(
         python_callable=fetch_new_links_task,
     )
     
-    # 任务2: 检查新链接
-    task_check_links = PythonOperator(
+    # 任务2: 检查新链接（使用 ShortCircuitOperator 实现条件终止）
+    task_check_links = ShortCircuitOperator(
         task_id='check_new_links',
         python_callable=check_new_links,
     )
@@ -894,12 +895,31 @@ with DAG(
         trigger_rule='all_success',  # 明确指定：只有所有上游任务成功才执行
     )
     
-    # 任务8: 发送完成通知
+    # 任务8: 发送完成通知（无论是否有新链接都会执行）
     task_notify = PythonOperator(
         task_id='send_completion_notification',
         python_callable=send_completion_notification,
+        trigger_rule='all_done',  # 无论上游任务成功、失败或跳过，都会执行
+    )
+    
+    # 任务9: 自动推送到 GitHub（只在有数据更新时执行）
+    task_git_push = BashOperator(
+        task_id='git_push_to_github',
+        bash_command=f"""
+        cd {PROJECT_ROOT} && \
+        git add data/ update/ config/url_surveillance_history.txt && \
+        git diff --cached --quiet || (git commit -m "自动更新: $(date '+%Y-%m-%d %H:%M:%S') CDC监测数据" && git push)
+        """,
+        trigger_rule='all_success',  # 只有所有上游任务成功才执行 push
     )
     
     # 定义任务依赖关系
-    task_fetch_links >> task_check_links >> task_download_pdf >> task_convert_md >> task_extract_data >> task_merge_data >> task_update_history >> task_notify
+    # 主流程：爬取 -> 检查 -> 下载 -> 转换 -> 提取 -> 合并 -> 更新历史
+    task_fetch_links >> task_check_links >> task_download_pdf >> task_convert_md >> task_extract_data >> task_merge_data >> task_update_history
+    
+    # 通知任务：无论数据处理是否成功都会执行
+    [task_fetch_links, task_update_history] >> task_notify
+    
+    # Git Push 任务：只有数据处理成功后才执行
+    task_update_history >> task_git_push
 
