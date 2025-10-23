@@ -75,7 +75,9 @@ export OPENROUTER_API_KEY="your-api-key-here"
 
 ## 📝 使用方法
 
-> 💡 **新用户？** 查看 [快速开始指南](QUICKSTART.md) 了解最简单的使用方法！
+> 💡 **新用户？** 查看 [快速开始指南](docs/QUICKSTART.md) 了解最简单的使用方法！
+
+> 🚀 **想要自动化调度？** 查看 [Airflow 部署指南](airflow/QUICKSTART_zh.md) 实现定时自动更新！
 
 ### 🚀 快速开始：自动化流水线（推荐）
 
@@ -387,6 +389,40 @@ uv run convert_pdf_to_md.py input.pdf --server http://your-mineru-server:port
 - PDF转换支持失败重试（默认3次）
 - 网页抓取支持多种等待策略回退
 - 数据提取支持跳过损坏文件继续处理
+
+## 🤖 Airflow 自动化调度
+
+想要实现数据的自动定时更新？本项目已支持 Airflow 部署！
+
+### 特性
+
+- ✅ **自动调度**：每周三上午10点自动执行数据更新
+- ✅ **可视化监控**：Web UI 实时查看任务状态
+- ✅ **失败重试**：自动重试失败的任务，并发送邮件通知
+- ✅ **任务编排**：清晰的 DAG 图展示数据处理流程
+- ✅ **日志管理**：集中管理所有任务日志
+
+### 快速开始
+
+```bash
+# 进入 airflow 目录
+cd airflow
+
+# 一键启动（需要 Docker）
+./quick_start.sh
+
+# 访问 Web UI
+# http://localhost:8080
+# 用户名: airflow, 密码: airflow
+```
+
+### 详细文档
+
+- [5分钟快速上手](airflow/QUICKSTART_zh.md) - 快速部署和使用
+- [完整部署指南](airflow/README_AIRFLOW.md) - 详细配置和故障排查
+- [部署总结](airflow/部署总结.md) - 架构说明和使用流程
+
+---
 
 ## 🐛 常见问题
 
