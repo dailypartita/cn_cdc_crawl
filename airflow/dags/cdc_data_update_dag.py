@@ -67,7 +67,7 @@ def fetch_surveillance_links_firecrawl(url: str, api_key: str) -> List[str]:
     payload = {
         "url": url,
         "limit": 5000,
-        "includeSubdomains": False,
+        "includeSubdomains": True,
         "sitemap": "include"
     }
     
@@ -846,7 +846,7 @@ with DAG(
     dag_id='cdc_covid19_data_update',
     default_args=DEFAULT_ARGS,
     description='自动更新中国疾控中心COVID-19监测数据',
-    schedule='0 0 * * 5',  # 每周五0点执行
+    schedule='0 0 * * 0',  # 每周日0点执行
     start_date=datetime(2025, 10, 1),
     catchup=False,
     tags=['cdc', 'covid19', 'data_pipeline'],
