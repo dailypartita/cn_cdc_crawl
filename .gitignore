@@ -1,5 +1,6 @@
 # airflow
 airflow/
+airflow/config/airflow_variables.json
 
 # Python
 __pycache__/
