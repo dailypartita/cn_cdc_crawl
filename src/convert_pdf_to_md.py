@@ -3,11 +3,11 @@
 
 """
 Batch convert PDFs to Markdown via MinerU API (/file_parse).
-Tested with a local MinerU at http://10.22.16.132:8011
+Tested with a local MinerU at https://mineru.net/api/v4/extract/task
 
 Usage:
   python convert_pdf_to_md.py /path/to/pdfs -o md_out \
-    --server http://10.22.16.132:8011 \
+    --server https://mineru.net/api/v4/extract/task \
     --lang ch --backend pipeline --parse-method auto \
     --formula-enable true --table-enable true \
     --workers 4 --timeout 120 --retries 3
@@ -101,7 +101,13 @@ def post_file(
     返回：(输出路径, success, message)
     """
     server = server.rstrip("/")
-    url = f"{server}/file_parse"
+    # 兼容两类传参：
+    # 1) 传入根地址（如 http://host:port 或 https://mineru.net），则拼接 /file_parse
+    # 2) 传入完整端点（如 https://mineru.net/api/v4/extract/task 或 .../file_parse），则直接使用
+    if server.endswith("/file_parse") or server.endswith("/extract/task") or "/api/" in server:
+        url = server
+    else:
+        url = f"{server}/file_parse"
 
     # 目标本地输出路径（保持目录结构）
     rel_dir = Path(pdf_path).resolve().parent
@@ -197,11 +203,12 @@ def post_file(
 
 def main():
     ap = argparse.ArgumentParser(description="Convert PDFs to Markdown via MinerU /file_parse")
-    ap.add_argument("input", help="PDF 文件或目录或通配符（如 './pdf/*.pdf'）")
+    ap.add_argument("-i", "--input", help="PDF 文件或目录或通配符（如 './pdf/*.pdf'）")
     ap.add_argument("-o", "--out", default="md_out", help="本地输出目录，默认 md_out")
     ap.add_argument("--server", default=os.environ.get("MINERU_API", "http://10.22.16.132:8011"),
                     help="MinerU 服务根地址，默认 http://10.22.16.132:8011")
-    ap.add_argument("--api-key", default="", help="如需鉴权，传入 Bearer token（可留空）")
+    ap.add_argument("--api-key", default=os.environ.get("MINERU_API_KEY", ""),
+                    help="如需鉴权，传入 Bearer token（可留空）")
 
     # 与 Swagger 对齐的解析参数
     ap.add_argument("--lang", nargs="+", default=["ch"], help="lang_list，多值可写多项，默认 ch")
@@ -255,4 +262,5 @@ def main():
 
 
 if __name__ == "__main__":
+    # url = "/data/ykx/covid19/get_data/cn_cdc_data/update/2025-10-27/pdf/t20251106_313312.pdf"
     main()

@@ -157,8 +157,13 @@ def main():
     )
     parser.add_argument(
         "--pdf-server",
-        default="http://10.22.16.132:8011",
-        help="PDF转Markdown服务器地址"
+        default=os.environ.get("MINERU_API", "https://mineru.net/api/v4/extract/task"),
+        help="PDF转Markdown服务器地址或完整端点（支持 /api/v4/extract/task）"
+    )
+    parser.add_argument(
+        "--pdf-api-key",
+        default=os.environ.get("MINERU_API_KEY", ""),
+        help="MinerU API 密钥（Bearer Token）"
     )
     parser.add_argument(
         "--update-dir",
@@ -251,6 +256,7 @@ def main():
                     str(pdf_file),
                     "-o", str(temp_md_dir),
                     "--server", args.pdf_server,
+                    "--api-key", args.pdf_api_key,
                     "--lang", "ch",
                     "--backend", "pipeline",
                     "--parse-method", "auto",

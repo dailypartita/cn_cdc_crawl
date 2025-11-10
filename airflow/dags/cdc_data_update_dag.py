@@ -33,7 +33,8 @@ DEFAULT_ARGS = {
 
 # 从 Airflow Variables 获取配置，如果不存在则使用默认值
 PROJECT_ROOT = Variable.get("cdc_project_root", "/data/ykx/covid19/get_data/cn_cdc_data")
-PDF_SERVER = Variable.get("cdc_pdf_server", "http://10.22.16.132:8011")
+MINERU_API = Variable.get("mineru_api", "")
+MINERU_API_KEY = Variable.get("mineru_api_key", "")
 URL_FILE = Variable.get("cdc_url_file", "config/url_surveillance_new.txt")
 HISTORY_URL_FILE = Variable.get("cdc_history_url_file", "config/url_surveillance_history.txt")
 CDC_MONITORING_URL = Variable.get("cdc_monitoring_url", "https://www.chinacdc.cn/jksj/jksj04_14275/")
@@ -526,7 +527,8 @@ def convert_pdf_to_md(**context):
             python_exe, "src/convert_pdf_to_md.py",
             str(pdf_file),
             "-o", str(md_dir),
-            "--server", PDF_SERVER,
+            "--server", MINERU_API,
+            "--api-key", MINERU_API_KEY,
             "--lang", "ch",
             "--backend", "pipeline",
             "--parse-method", "auto",
