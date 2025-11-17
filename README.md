@@ -180,20 +180,49 @@ uv run python src/save_web_to_pdf.py [URL文件] -o [输出目录] [选项]
 
 #### 2. `convert_pdf_to_md.py` - PDF转Markdown工具
 
+支持两种模式：直接上传模式和 OSS 模式。
+
+**直接上传模式（默认）：**
 ```bash
-uv run python src/convert_pdf_to_md.py [PDF路径] -o [输出目录] [选项]
+uv run python src/convert_pdf_to_md.py -i [PDF路径] -o [输出目录] \
+  --server https://mineru.net/api/v4/extract/task \
+  --api-key YOUR_API_KEY \
+  --lang ch --backend pipeline --parse-method auto \
+  --formula-enable true --table-enable true \
+  --workers 4 --timeout 120 --retries 3
+```
+
+**OSS 模式（推荐用于生产环境）：**
+```bash
+uv run python src/convert_pdf_to_md.py -i [PDF路径] -o [输出目录] \
+  --use-oss -b epi-flow --oss-prefix pdfs \
+  --server https://mineru.net/api/v4/extract/task \
+  --api-key YOUR_API_KEY \
+  --model-version vlm \
+  --poll-interval 5 --max-wait-time 600
 ```
 
 **主要参数：**
-- `input`：PDF文件、目录或通配符模式
+- `-i, --input`：PDF文件、目录或通配符模式
 - `-o, --out`：输出目录，默认 `md_out`
-- `--server`：MinerU服务器地址
+- `--server`：MinerU服务器地址，默认 `https://mineru.net/api/v4/extract/task`
+- `--api-key`：MinerU API密钥（必需）
+
+**直接上传模式参数：**
 - `--lang`：语言设置，默认 `ch`（中文）
 - `--backend`：后端类型，默认 `pipeline`
 - `--parse-method`：解析方法，默认 `auto`
 - `--formula-enable`：启用公式识别，默认 true
 - `--table-enable`：启用表格识别，默认 true
 - `--workers`：并发工作线程数，默认 4
+
+**OSS 模式参数：**
+- `--use-oss`：启用 OSS 模式
+- `-b, --oss-bucket`：OSS bucket 名称（必需）
+- `--oss-prefix`：OSS 路径前缀（可选）
+- `--model-version`：MinerU 模型版本，默认 `vlm`
+- `--poll-interval`：任务状态轮询间隔（秒），默认 5
+- `--max-wait-time`：任务最大等待时间（秒），默认 600
 
 #### 3. `extract_data_from_md.py` - 数据提取工具
 

@@ -33,8 +33,16 @@ DEFAULT_ARGS = {
 
 # 从 Airflow Variables 获取配置，如果不存在则使用默认值
 PROJECT_ROOT = Variable.get("cdc_project_root", "/data/ykx/covid19/get_data/cn_cdc_data")
-MINERU_API = Variable.get("mineru_api", "")
+MINERU_API = Variable.get("mineru_api", "https://mineru.net/api/v4/extract/task")
 MINERU_API_KEY = Variable.get("mineru_api_key", "")
+# OSS 相关配置
+USE_OSS = Variable.get("use_oss_mode", "false").lower() == "true"
+OSS_BUCKET = Variable.get("oss_bucket", "")
+OSS_PREFIX = Variable.get("oss_prefix", "")
+OSS_URL_EXPIRES = Variable.get("oss_url_expires", "3600")
+MINERU_MODEL_VERSION = Variable.get("mineru_model_version", "vlm")
+POLL_INTERVAL = Variable.get("mineru_poll_interval", "5")
+MAX_WAIT_TIME = Variable.get("mineru_max_wait_time", "600")
 URL_FILE = Variable.get("cdc_url_file", "config/url_surveillance_new.txt")
 HISTORY_URL_FILE = Variable.get("cdc_history_url_file", "config/url_surveillance_history.txt")
 CDC_MONITORING_URL = Variable.get("cdc_monitoring_url", "https://www.chinacdc.cn/jksj/jksj04_14275/")
@@ -515,36 +523,64 @@ def convert_pdf_to_md(**context):
         print("⚠️ 没有找到 PDF 文件")
         return str(md_dir)
     
-    print(f"📝 开始转换 {len(pdf_files)} 个 PDF 文件为 Markdown...")
+    mode_str = "OSS 模式" if USE_OSS else "直接上传模式"
+    print(f"📝 开始转换 {len(pdf_files)} 个 PDF 文件为 Markdown... (使用 {mode_str})")
     
     # 使用当前 Python 解释器（Airflow 的 Python）
     python_exe = sys.executable
     
+    # 构建基础命令
     for pdf_file in pdf_files:
         print(f"\n转换: {pdf_file.name}")
         
         cmd = [
             python_exe, "src/convert_pdf_to_md.py",
-            str(pdf_file),
+            "-i", str(pdf_file),
             "-o", str(md_dir),
             "--server", MINERU_API,
-            "--api-key", MINERU_API_KEY,
-            "--lang", "ch",
-            "--backend", "pipeline",
-            "--parse-method", "auto",
-            "--formula-enable", "true",
-            "--table-enable", "true",
-            "--workers", "6",
-            "--timeout", "180"
         ]
+        
+        # 添加 API Key（如果提供）
+        if MINERU_API_KEY:
+            cmd.extend(["--api-key", MINERU_API_KEY])
+        
+        # OSS 模式配置
+        if USE_OSS:
+            if not OSS_BUCKET:
+                logging.error("⚠️ OSS 模式已启用，但未配置 OSS_BUCKET，跳过转换")
+                continue
+            cmd.extend([
+                "--use-oss",
+                "-b", OSS_BUCKET,
+                "--model-version", MINERU_MODEL_VERSION,
+                "--poll-interval", str(POLL_INTERVAL),
+                "--max-wait-time", str(MAX_WAIT_TIME),
+            ])
+            if OSS_PREFIX:
+                cmd.extend(["--oss-prefix", OSS_PREFIX])
+            if OSS_URL_EXPIRES and OSS_URL_EXPIRES != "3600":
+                cmd.extend(["--oss-url-expires", str(OSS_URL_EXPIRES)])
+        else:
+            # 直接上传模式的参数
+            cmd.extend([
+                "--lang", "ch",
+                "--backend", "pipeline",
+                "--parse-method", "auto",
+                "--formula-enable", "true",
+                "--table-enable", "true",
+            ])
         
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
             print(f"✅ 转换成功: {pdf_file.name}")
         except subprocess.CalledProcessError as e:
             logging.error(f"转换失败: {pdf_file.name}")
+            logging.error(f"命令: {' '.join(cmd)}")
             logging.error(f"错误信息: {e.stderr}")
+            logging.error(f"标准输出: {e.stdout}")
             continue
     
     print(f"\n✅ PDF 转换任务完成")
