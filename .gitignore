@@ -68,3 +68,4 @@ htmlcov/
 
 # uv
 uv.lock
+.env

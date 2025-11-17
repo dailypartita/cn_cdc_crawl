@@ -19,6 +19,48 @@ from airflow.operators.python import PythonOperator, ShortCircuitOperator
 from airflow.operators.bash import BashOperator
 from airflow.models import Variable
 
+
+def load_env_file(env_path: str) -> dict:
+    """
+    从 .env 文件加载环境变量
+    
+    Args:
+        env_path: .env 文件路径
+        
+    Returns:
+        环境变量字典
+    """
+    env_vars = {}
+    env_file = Path(env_path)
+    
+    if not env_file.exists():
+        logging.warning(f".env 文件不存在: {env_path}")
+        return env_vars
+    
+    try:
+        with open(env_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                # 跳过空行和注释
+                if not line or line.startswith('#'):
+                    continue
+                # 解析 KEY=VALUE 格式
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    # 移除引号（如果有）
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    elif value.startswith("'") and value.endswith("'"):
+                        value = value[1:-1]
+                    env_vars[key] = value
+        logging.info(f"从 .env 文件加载了 {len(env_vars)} 个环境变量")
+    except Exception as e:
+        logging.error(f"读取 .env 文件失败: {e}")
+    
+    return env_vars
+
 # 默认配置
 DEFAULT_ARGS = {
     'owner': 'cdc_data_team',
@@ -33,24 +75,28 @@ DEFAULT_ARGS = {
 
 # 从 Airflow Variables 获取配置，如果不存在则使用默认值
 PROJECT_ROOT = Variable.get("cdc_project_root", "/data/ykx/covid19/get_data/cn_cdc_data")
-MINERU_API = Variable.get("mineru_api", "https://mineru.net/api/v4/extract/task")
-MINERU_API_KEY = Variable.get("mineru_api_key", "")
-# OSS 相关配置
-USE_OSS = Variable.get("use_oss_mode", "false").lower() == "true"
-OSS_BUCKET = Variable.get("oss_bucket", "")
-OSS_PREFIX = Variable.get("oss_prefix", "")
-OSS_URL_EXPIRES = Variable.get("oss_url_expires", "3600")
-MINERU_MODEL_VERSION = Variable.get("mineru_model_version", "vlm")
-POLL_INTERVAL = Variable.get("mineru_poll_interval", "5")
-MAX_WAIT_TIME = Variable.get("mineru_max_wait_time", "600")
-URL_FILE = Variable.get("cdc_url_file", "config/url_surveillance_new.txt")
-HISTORY_URL_FILE = Variable.get("cdc_history_url_file", "config/url_surveillance_history.txt")
-CDC_MONITORING_URL = Variable.get("cdc_monitoring_url", "https://www.chinacdc.cn/jksj/jksj04_14275/")
-FIRECRAWL_API_KEY = Variable.get("firecrawl_api_key", "fc-1070b8415da9472c87f06cfd01cf0ecf")
-UPDATE_DIR = Variable.get("cdc_update_dir", "update")
-ALL_CSV = Variable.get("cdc_all_csv", "data/cncdc_surveillance_all.csv")
-COVID_CSV = Variable.get("cdc_covid_csv", "data/cncdc_surveillance_covid19.csv")
 
+# 优先从 .env 文件读取 MINERU_API_KEY，如果不存在则从 Airflow Variables 读取
+ENV_FILE = Path(PROJECT_ROOT) / ".env"
+env_vars = load_env_file(str(ENV_FILE))
+MINERU_API_KEY = env_vars.get("MINERU_API_KEY")
+MINERU_API = env_vars.get("MINERU_API", "https://mineru.net/api/v4/extract/task")
+MINERU_MODEL_VERSION = env_vars.get("MINERU_MODEL_VERSION", "vlm")
+
+# OSS 相关配置
+USE_OSS = env_vars.get("USE_OSS", True)
+OSS_BUCKET = env_vars.get("OSS_BUCKET", "epi-flow")
+OSS_PREFIX = env_vars.get("OSS_PREFIX", "pdfs")
+OSS_URL_EXPIRES = env_vars.get("OSS_URL_EXPIRES", "3600")
+POLL_INTERVAL = env_vars.get("POLL_INTERVAL", "5")
+MAX_WAIT_TIME = env_vars.get("MAX_WAIT_TIME", "600")
+
+CDC_MONITORING_URL = env_vars.get("CDC_MONITORING_URL", "https://www.chinacdc.cn/jksj/jksj04_14275/")
+HISTORY_URL_FILE = env_vars.get("HISTORY_URL_FILE", "config/url_surveillance_history.txt")
+UPDATE_DIR = env_vars.get("UPDATE_DIR", "update")
+ALL_CSV = env_vars.get("ALL_CSV", "data/cncdc_surveillance_all.csv")
+COVID_CSV = env_vars.get("COVID_CSV", "data/cncdc_surveillance_covid19.csv")
+FIRECRAWL_API_KEY = env_vars.get("FIRECRAWL_API_KEY", "")
 
 # ==================== 爬虫辅助函数 ====================
 
@@ -538,11 +584,8 @@ def convert_pdf_to_md(**context):
             "-i", str(pdf_file),
             "-o", str(md_dir),
             "--server", MINERU_API,
+            "--api-key", MINERU_API_KEY
         ]
-        
-        # 添加 API Key（如果提供）
-        if MINERU_API_KEY:
-            cmd.extend(["--api-key", MINERU_API_KEY])
         
         # OSS 模式配置
         if USE_OSS:

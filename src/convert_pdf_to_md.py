@@ -42,6 +42,42 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
 
+def get_ossutil_path() -> str:
+    """
+    获取 ossutil 命令路径。
+    优先级：环境变量 OSS_UTILS_PATH > .env 文件 > 系统 PATH 中的 ossutil
+    
+    Returns:
+        ossutil 命令路径
+    """
+    # 1. 从环境变量读取
+    ossutil_path = os.environ.get("OSS_UTILS_PATH")
+    if ossutil_path and Path(ossutil_path).exists():
+        return ossutil_path
+    
+    # 2. 从 .env 文件读取
+    env_file = Path(__file__).parent.parent / ".env"
+    if env_file.exists():
+        try:
+            with open(env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('OSS_UTILS_PATH='):
+                        ossutil_path = line.split('=', 1)[1].strip()
+                        # 移除引号
+                        if ossutil_path.startswith('"') and ossutil_path.endswith('"'):
+                            ossutil_path = ossutil_path[1:-1]
+                        elif ossutil_path.startswith("'") and ossutil_path.endswith("'"):
+                            ossutil_path = ossutil_path[1:-1]
+                        if ossutil_path and Path(ossutil_path).exists():
+                            return ossutil_path
+        except Exception:
+            pass
+    
+    # 3. 使用系统 PATH 中的 ossutil
+    return "ossutil"
+
+
 def list_pdfs(input_path: str) -> List[str]:
     p = Path(input_path)
     if p.is_file() and p.suffix.lower() == ".pdf":
@@ -73,7 +109,8 @@ def upload_to_oss(pdf_path: str, oss_path: str, opts: argparse.Namespace) -> tup
         file_size_mb = file_size / (1024 * 1024)
         timeout = max(60, min(int(file_size_mb * 2) + 60, 1800))  # 至少60秒，最多30分钟
         
-        cmd = ["ossutil", "cp", pdf_path, oss_path]
+        ossutil_cmd = get_ossutil_path()
+        cmd = [ossutil_cmd, "cp", pdf_path, oss_path]
         result = subprocess.run(
             cmd, capture_output=True, text=True, timeout=timeout
         )
@@ -87,7 +124,8 @@ def upload_to_oss(pdf_path: str, oss_path: str, opts: argparse.Namespace) -> tup
     except subprocess.TimeoutExpired:
         return (False, f"upload timeout (>{timeout}s)")
     except FileNotFoundError:
-        return (False, "ossutil command not found, please install ossutil")
+        ossutil_path = get_ossutil_path()
+        return (False, f"ossutil command not found at: {ossutil_path}. Please check OSS_UTILS_PATH in .env file or install ossutil")
     except Exception as e:
         return (False, f"upload failed: {e}")
 
@@ -100,7 +138,8 @@ def sign_oss_url(oss_path: str, expires: int = 3600, opts: argparse.Namespace = 
     """
     try:
         # ossutil sign 不支持自定义过期时间，使用默认值（通常是 900 秒）
-        cmd = ["ossutil", "sign", oss_path]
+        ossutil_cmd = get_ossutil_path()
+        cmd = [ossutil_cmd, "sign", oss_path]
         result = subprocess.run(
             cmd, capture_output=True, text=True, timeout=10
         )
@@ -112,6 +151,9 @@ def sign_oss_url(oss_path: str, expires: int = 3600, opts: argparse.Namespace = 
                     return (True, line.strip())
             return (True, url)
         return (False, f"ossutil sign error: {result.stderr[:200]}")
+    except FileNotFoundError:
+        ossutil_path = get_ossutil_path()
+        return (False, f"ossutil command not found at: {ossutil_path}. Please check OSS_UTILS_PATH in .env file or install ossutil")
     except Exception as e:
         return (False, f"sign failed: {e}")
 
