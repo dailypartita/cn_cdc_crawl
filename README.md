@@ -1,38 +1,41 @@
-# cn_cdc_crawl 中国 CDC 哨点医院监测数据同步
+# 中国 CDC 哨点医院监测数据同步工具
 
 [![Python](https://img.shields.io/badge/Python->=3.10-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-最近开发了一个小工具，用于同步中国 CDC 哨点医院监测数据。使用 Airflow 每周日自动执行，确保数据及时更新。数据会以 CSV 格式上传到 GitHub。代码和数据完全开源，如果觉得有用欢迎点个 star 🙏🙏🙏🙏
+本工具用于自动同步和处理中国疾病预防控制中心（CDC）哨点医院监测数据。支持从 CDC 官网批量下载监测报告，转换为结构化数据，并定期更新。数据以 CSV 格式输出，可用于后续分析和预测模型。
 
 ![](./docs/cn_cdc_2025-11-23.jpg)
 
 ## 项目简介
 
-主要处理两类数据：
+本工具主要处理两类数据：
+
 - **新冠疫情数据** (`xgbdyq`)：新型冠状病毒肺炎疫情相关报告
 - **急性呼吸道传染病监测数据** (`jksj04_14275`)：全国哨点监测情况报告
 
-数据主要用于支持 [China-COVID-19-Forecast-Hub](https://github.com/dailypartita/China-COVID-19-Forecast-Hub) 项目。
+输出数据主要用于支持 [China-COVID-19-Forecast-Hub](https://github.com/dailypartita/China-COVID-19-Forecast-Hub) 项目的数据需求。
 
-## 技术栈
+## 技术架构
 
-工作流程：
-1. 定期爬取 CDC 官网，找到最新监测报告（手动维护 URL 列表）
-2. 使用 `playwright` 将网页保存为 PDF
-3. PDF 上传到 OSS（对象存储服务）
-4. 获取资源地址和签名后，使用 `MinerU` 将 PDF 转为 Markdown
-5. 最后使用提取工具（基于规则的小 Agent）进行数据提取
+### 工作流程
 
-主要技术：
-- Python 3.10+
-- Playwright（网页自动化，保存 PDF）
-- MinerU（PDF 转 Markdown，支持 OSS 模式）
-- Pandas（数据处理和 CSV 输出）
+1. **数据获取**：用 Firecrawl map API 从 CDC 官网获取监测报告的链接，拿到最新的监测报告 url
+2. **格式转换**：使用 Playwright 将网页保存为 PDF 格式
+3. **文件存储**：将 PDF 上传到阿里云对象存储（OSS）
+4. **内容提取**：使用 MinerU 将 PDF 转换为 Markdown 格式
+5. **数据解析**：使用 LangChain Agent 从 Markdown 中提取结构化数据
+
+### 技术栈
+
+- **Python 3.10+**：主要编程语言
+- **Playwright**：网页自动化工具，用于生成 PDF
+- **MinerU**：PDF 解析工具，支持 OSS 模式
+- **LangChain & Pandas**：数据处理和 CSV 输出
 
 ## 安装
 
-使用 uv（推荐）：
+### 使用 uv（推荐）
 
 ```bash
 git clone <repository-url>
@@ -40,7 +43,7 @@ cd cn_cdc_data
 uv install
 ```
 
-或者用 pip：
+### 使用 pip
 
 ```bash
 pip install -r requirements.txt
@@ -243,8 +246,8 @@ cd airflow
 
 ### 其他注意事项
 
-- 有时候 MinerU 的 VLM 视觉方案可能会忽略小数点，比如把 1.5 识别成 15。因此会不定期进行人工审核，确保数据准确性。
-- 如果发现问题，欢迎提交 Issue。
+- MinerU 的 VLM 视觉识别方案在处理小数时可能出现错误（如将 1.5 识别为 15）。建议在使用数据前进行人工审核，确保数据准确性。
+- 如发现数据问题或程序错误，欢迎通过 GitHub Issue 反馈。
 
 ## 常见问题
 
@@ -269,7 +272,7 @@ cd airflow
 
 ## 开源说明
 
-代码和数据完全开源。数据会定期上传到 GitHub。如果觉得有用，欢迎点个 star。
+本项目代码和数据均采用开源方式发布。数据会定期更新并同步到 GitHub 仓库。
 
 ## 贡献
 
