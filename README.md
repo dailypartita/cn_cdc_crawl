@@ -224,10 +224,6 @@ cd airflow
 # 用户名: airflow, 密码: airflow
 ```
 
-详细文档：
-- [快速上手](airflow/QUICKSTART_zh.md)
-- [部署指南](airflow/README_AIRFLOW.md)
-
 ## ⚠️ 注意事项
 
 ### 2025年14-22周数据说明
@@ -284,9 +280,12 @@ MIT License，详见 [LICENSE](LICENSE) 文件。
 
 ## 致谢
 
+- 中国疾病预防控制中心 - 数据源
+- [FireCrawl](https://www.firecrawl.dev/) - 网页链接获取
 - [MinerU](https://github.com/opendatalab/MinerU) - PDF 解析工具
 - [Playwright](https://playwright.dev/) - 浏览器自动化
-- 中国疾病预防控制中心 - 数据源
+- [LangChain](https://github.com/langchain-ai/langchain) - 数据提取 Agent 搭建
+- [AirFlow](https://github.com/apache/airflow) - 任务自动化调度
 
 ## 联系方式
 
