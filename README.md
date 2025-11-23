@@ -1,560 +1,295 @@
-# 中国疾控中心数据爬取与处理工具
+# cn_cdc_crawl 中国 CDC 哨点医院监测数据同步
 
 [![Python](https://img.shields.io/badge/Python->=3.10-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-本项目是一个专门用于爬取、处理和分析中国疾控中心（CDC）发布的传染病监测数据的自动化工具。该工具可以从中国CDC官网批量下载并处理新冠疫情数据和急性呼吸道传染病监测报告，将其转换为结构化数据用于后续分析。
+最近开发了一个小工具，用于同步中国 CDC 哨点医院监测数据。使用 Airflow 每周日自动执行，确保数据及时更新。数据会以 CSV 格式上传到 GitHub。代码和数据完全开源，如果觉得有用欢迎点个 star 🙏🙏🙏🙏
 
-**本项目主要为 [China-COVID-19-Forecast-Hub](https://github.com/dailypartita/China-COVID-19-Forecast-Hub) 项目提供标准化的疫情监测数据**，确保预测模型能够获得及时、准确、格式统一的COVID-19监测数据。
+![](./docs/cn_cdc_2025-11-23.jpg)
 
-![](./docs/demo.jpg)
+## 项目简介
 
-## 📊 项目概述
-
-本项目主要处理两类数据：
+主要处理两类数据：
 - **新冠疫情数据** (`xgbdyq`)：新型冠状病毒肺炎疫情相关报告
 - **急性呼吸道传染病监测数据** (`jksj04_14275`)：全国哨点监测情况报告
 
-## 🚀 主要功能
+数据主要用于支持 [China-COVID-19-Forecast-Hub](https://github.com/dailypartita/China-COVID-19-Forecast-Hub) 项目。
 
-1. **批量网页抓取**：自动从中国CDC官网批量下载指定页面并保存为PDF
-2. **PDF转Markdown**：利用MinerU等OCR服务将PDF文件转换为结构化的Markdown格式
-3. **数据提取**：从Markdown文件中智能提取病原体检测数据，输出结构化CSV
-4. **可选LLM增强**：支持使用大语言模型提升数据提取的准确性
+## 技术栈
 
-## 🛠 系统要求
+工作流程：
+1. 定期爬取 CDC 官网，找到最新监测报告（手动维护 URL 列表）
+2. 使用 `playwright` 将网页保存为 PDF
+3. PDF 上传到 OSS（对象存储服务）
+4. 获取资源地址和签名后，使用 `MinerU` 将 PDF 转为 Markdown
+5. 最后使用提取工具（基于规则的小 Agent）进行数据提取
 
-- Python 3.10 或更高版本
-- uv 包管理器（推荐）或 pip
-- MinerU API 服务器（用于PDF转换）
-- OpenRouter API 密钥（可选，用于LLM增强）
+主要技术：
+- Python 3.10+
+- Playwright（网页自动化，保存 PDF）
+- MinerU（PDF 转 Markdown，支持 OSS 模式）
+- Pandas（数据处理和 CSV 输出）
 
-## 📦 安装依赖
+## 安装
 
-本项目使用 `uv` 进行依赖管理：
+使用 uv（推荐）：
 
 ```bash
-# 克隆项目
 git clone <repository-url>
 cd cn_cdc_data
-
-# 安装依赖
 uv install
 ```
 
-如果使用 pip：
+或者用 pip：
 
 ```bash
 pip install -r requirements.txt
 ```
 
-主要依赖包括：
-- `beautifulsoup4`：HTML解析
-- `langchain` & `langchain-openai`：LLM处理
-- `pandas`：数据处理
-- `playwright`：浏览器自动化
-- `requests`：HTTP请求
-- `tqdm`：进度条显示
+## 配置
 
-## 🔧 配置说明
+### MinerU 服务器
 
-### 1. MinerU 服务器配置
+默认使用 MinerU API 将 PDF 转为 Markdown，默认地址：
 
-本项目需要MinerU API服务器进行PDF到Markdown的转换。默认配置：
 ```
-默认服务器：http://10.22.16.132:8011
-支持的格式：PDF → Markdown
+http://10.22.16.132:8011
 ```
 
-### 2. OpenRouter API配置（可选）
-
-如需使用LLM增强数据提取准确性：
-```bash
-export OPENROUTER_API_KEY="your-api-key-here"
-```
-
-## 📝 使用方法
-
-> 💡 **新用户？** 查看 [快速开始指南](docs/QUICKSTART.md) 了解最简单的使用方法！
-
-> 🚀 **想要自动化调度？** 查看 [Airflow 部署指南](airflow/QUICKSTART_zh.md) 实现定时自动更新！
-
-### 🚀 快速开始：自动化流水线（推荐）
-
-使用 `main_pipeline.py` 可以一键完成从URL到最终数据更新的全部流程：
+如果需要使用 OSS 模式，需要配置 OSS 相关参数：
 
 ```bash
-# 基本使用（处理 config/url_surveillance_new.txt 中的URL）
-uv run python src/main_pipeline.py
-
-# 自定义参数
-uv run python src/main_pipeline.py \
-    --url-file config/url_surveillance_new.txt \
-    --pdf-server http://10.22.16.132:8011 \
-    --update-dir update \
-    --all-csv data/cncdc_surveillance_all.csv \
-    --covid-csv data/cncdc_surveillance_covid19.csv
+export OSS_BUCKET="your-bucket-name"
+export OSS_PREFIX="pdfs"  # 可选
+export OSS_UTILS_PATH="/path/to/ossutil"  # ossutil 路径
 ```
 
-**自动化流水线会自动完成以下步骤：**
-1. 📥 从URL列表读取要处理的网页
-2. 📄 下载网页并保存为PDF
-3. 📝 转换PDF为Markdown
-4. 📊 提取结构化数据到CSV
-5. 📅 根据参考日期创建目录结构（`update/{reference_date}/pdf,md,csv`）
-6. 🔄 自动合并新数据到主数据文件（按日期降序排列）
-7. ✅ 同时更新全部病原体数据和新冠专项数据
+### MinerU API Key（可选）
 
-**参数说明：**
-- `--url-file`: URL列表文件路径（默认：`config/url_surveillance_new.txt`）
-- `--pdf-server`: PDF转Markdown服务器地址（默认：`http://10.22.16.132:8011`）
-- `--update-dir`: 更新文件存放目录（默认：`update`）
-- `--all-csv`: 全部数据CSV文件路径（默认：`data/cncdc_surveillance_all.csv`）
-- `--covid-csv`: 新冠数据CSV文件路径（默认：`data/cncdc_surveillance_covid19.csv`）
-- `--skip-download`: 跳过下载和转换步骤（仅用于测试）
-
-### 完整工作流（手动步骤）
-
-如果需要更细粒度的控制，可以分步执行：
-
-#### 1. 急性呼吸道传染病监测数据处理
+如果 MinerU 服务需要鉴权：
 
 ```bash
-# 步骤1: 爬取网页并保存为PDF
-uv run python src/save_web_to_pdf.py \
-    config/url_surveillance_new.txt -o pdf \
-    --format A1 --margin 10mm \
-    -c 6 --wait-until load
-
-# 步骤2: 转换PDF为Markdown
-uv run python src/convert_pdf_to_md.py pdf -o md \
-  --server http://10.22.16.132:8011 \
-  --lang ch --backend pipeline --parse-method auto \
-  --formula-enable true --table-enable true \
-  --workers 6 --timeout 180 
-
-# 步骤3: 提取结构化数据
-export OPENROUTER_API_KEY="your-api-key"
-uv run python src/extract_surveillance_data.py md -o data/updated_surveillance_data.csv --no-llm --debug
+export MINERU_API_KEY="your-api-key"
 ```
 
-#### 2. 新冠疫情数据处理
+## 使用方法
+
+### 手动执行步骤
+
+#### 1. 爬取网页并保存为 PDF
 
 ```bash
-# 爬取并保存PDF
-uv run python src/save_web_to_pdf.py \
-    config/url_covid19.txt -o pdf \
-    --format A1 --margin 10mm \
-    -c 6 --wait-until load
-
-# 转换为Markdown
-uv run python src/convert_pdf_to_md.py pdf -o md \
-  --server http://10.22.16.132:8011 \
-  --lang ch --backend pipeline --parse-method auto \
-  --formula-enable true --table-enable true \
-  --workers 6 --timeout 180 
+uv run python src/save_web_to_pdf.py config/url_surveillance_new.txt -o pdf \
+    --format A1 --margin 10mm -c 6 --wait-until load
 ```
 
-### 各工具详细说明
+主要参数：
+- `input`: URL 列表文件（每行一个 URL）或逗号分隔的 URL
+- `-o, --output`: 输出目录（默认 `pdf_out`）
+- `--format`: 纸张格式（默认 A4）
+- `-c, --concurrency`: 并发数（默认 4）
 
-#### 1. `save_web_to_pdf.py` - 网页转PDF工具
+#### 2. 转换 PDF 为 Markdown
+
+支持两种模式：
+
+**直接上传模式：**
 
 ```bash
-uv run python src/save_web_to_pdf.py [URL文件] -o [输出目录] [选项]
-```
-
-**主要参数：**
-- `input`：URL列表文件（每行一个URL）或逗号分隔的URL字符串
-- `-o, --output`：输出目录，默认 `pdf_out`
-- `--format`：纸张格式（A4/A1/Letter等），默认 A4
-- `--margin`：页边距，默认 10mm
-- `-c, --concurrency`：并发数，默认 4
-- `-t, --timeout`：单页超时时间（秒），默认 45
-- `--wait-until`：页面加载等待策略（load/networkidle/domcontentloaded）
-
-**特色功能：**
-- 中文字体优化支持
-- 打印友好的页面样式调整
-- 自动处理粘性导航栏
-- 智能文件命名和去重
-
-#### 2. `convert_pdf_to_md.py` - PDF转Markdown工具
-
-支持两种模式：直接上传模式和 OSS 模式。
-
-**直接上传模式（默认）：**
-```bash
-uv run python src/convert_pdf_to_md.py -i [PDF路径] -o [输出目录] \
+uv run python src/convert_pdf_to_md.py -i pdf -o md \
   --server https://mineru.net/api/v4/extract/task \
   --api-key YOUR_API_KEY \
-  --lang ch --backend pipeline --parse-method auto \
-  --formula-enable true --table-enable true \
-  --workers 4 --timeout 120 --retries 3
+  --lang ch --workers 4
 ```
 
-**OSS 模式（推荐用于生产环境）：**
+**OSS 模式（推荐，用于生产环境）：**
+
 ```bash
-uv run python src/convert_pdf_to_md.py -i [PDF路径] -o [输出目录] \
+uv run python src/convert_pdf_to_md.py -i pdf -o md \
   --use-oss -b epi-flow --oss-prefix pdfs \
   --server https://mineru.net/api/v4/extract/task \
   --api-key YOUR_API_KEY \
-  --model-version vlm \
-  --poll-interval 5 --max-wait-time 600
+  --model-version vlm
 ```
 
-**主要参数：**
-- `-i, --input`：PDF文件、目录或通配符模式
-- `-o, --out`：输出目录，默认 `md_out`
-- `--server`：MinerU服务器地址，默认 `https://mineru.net/api/v4/extract/task`
-- `--api-key`：MinerU API密钥（必需）
+主要参数：
+- `-i, --input`: PDF 文件或目录
+- `-o, --out`: 输出目录（默认 `md_out`）
+- `--use-oss`: 启用 OSS 模式（先上传到 OSS，再提交任务）
+- `--workers`: 并发数（默认 4）
 
-**直接上传模式参数：**
-- `--lang`：语言设置，默认 `ch`（中文）
-- `--backend`：后端类型，默认 `pipeline`
-- `--parse-method`：解析方法，默认 `auto`
-- `--formula-enable`：启用公式识别，默认 true
-- `--table-enable`：启用表格识别，默认 true
-- `--workers`：并发工作线程数，默认 4
-
-**OSS 模式参数：**
-- `--use-oss`：启用 OSS 模式
-- `-b, --oss-bucket`：OSS bucket 名称（必需）
-- `--oss-prefix`：OSS 路径前缀（可选）
-- `--model-version`：MinerU 模型版本，默认 `vlm`
-- `--poll-interval`：任务状态轮询间隔（秒），默认 5
-- `--max-wait-time`：任务最大等待时间（秒），默认 600
-
-#### 3. `extract_data_from_md.py` - 数据提取工具
+#### 3. 提取数据
 
 ```bash
-uv run python src/extract_data_from_md.py [Markdown目录] -o [CSV输出] [选项]
+# 增量更新模式（推荐）：合并到已有文件，不覆盖旧数据
+uv run python src/extract_surveillance_data.py md -o data/updated_surveillance_data.csv \
+  --append --debug
+
+# 或覆盖模式（默认）：完全覆盖输出文件
+uv run python src/extract_surveillance_data.py md -o data/updated_surveillance_data.csv \
+  --debug
 ```
 
-**主要参数：**
-- `input`：Markdown文件目录
-- `-o, --output`：输出CSV文件路径
-- `--no-llm`：禁用LLM增强（使用基于规则的提取）
-- `--debug`：启用调试输出
-- `--model`：指定LLM模型，默认 `deepseek/deepseek-chat`
-- `--workers`：并发处理数，默认 4
+或者使用另一个提取工具：
 
-**数据提取规则：**
+```bash
+# 增量更新模式（推荐）
+uv run python src/extract_data_from_md.py md -o data/cncdc_surveillance_all.csv --append
+
+# 覆盖模式（默认）
+uv run python src/extract_data_from_md.py md -o data/cncdc_surveillance_all.csv
+```
+
+主要参数：
+- `input`: Markdown 文件目录
+- `-o, --output`: 输出 CSV 文件路径
+- `--append`: 增量更新模式，合并到已有文件，不覆盖旧数据
+- `--debug`: 显示调试信息
+
+提取规则：
 - 自动识别报告日期和周次信息
-- 解析"表1"病原体检测数据
-- 支持门急诊流感样病例（ILI）和住院严重急性呼吸道感染（SARI）两类数据
-- 智能处理百分比和病例数数据
+- 从 Markdown 中解析表格数据（主要是"表1"）
+- 提取门急诊流感样病例（ILI）和住院严重急性呼吸道感染（SARI）两类数据
+- 使用 `--append` 模式时，会自动去重（基于日期、周次、病原体组合），只保留最新的数据
 
-#### 4. `generate_interactive_plot.py` - 生成交互式图表
-
-```bash
-uv run python src/generate_interactive_plot.py
-```
-
-**功能说明：**
-- 从 `data/covid_only_updated_surveillance_data.csv` 读取COVID-19监测数据
-- 生成包含 ILI 和 SARI 阳性率的 Plotly 交互式图表
-- 支持多个平滑窗口（1周/3周/5周/7周）切换
-- 输出独立的 HTML 文件到 `docs/covid19_interactive.html`
-- 适用于 GitHub Pages 托管展示
-
-**交互功能：**
-- 🖱️ 鼠标悬停显示详细数据点信息
-- 📊 点击按钮切换不同的数据平滑窗口
-- 🔍 缩放和平移查看特定时间段
-- 📅 快速选择预设时间范围
-- 💾 导出为高分辨率 PNG 图片
-
-## 📁 项目结构
+## 项目结构
 
 ```
 cn_cdc_data/
-├── README.md                        # 项目文档
-├── pyproject.toml                  # 项目配置和依赖
-├── requirements.txt                # Python依赖列表
-├── .gitignore                      # Git忽略配置
+├── src/
+│   ├── save_web_to_pdf.py        # 网页转 PDF
+│   ├── convert_pdf_to_md.py      # PDF 转 Markdown（支持 OSS 模式）
+│   ├── extract_surveillance_data.py   # 数据提取工具
+│   ├── extract_data_from_md.py        # 另一个数据提取工具
+│   └── cn_cdc_covid19_model.ipynb     # 数据分析笔记本
 │
-├── src/                            # 源代码目录
-│   ├── main_pipeline.py                # 🚀 自动化流水线主程序
-│   ├── save_web_to_pdf.py              # 网页批量保存为PDF
-│   ├── convert_pdf_to_md.py            # PDF转Markdown转换器
-│   ├── extract_data_from_md.py         # 结构化数据提取工具
-│   ├── extract_surveillance_data.py    # 专用监测数据提取工具
-│   └── generate_interactive_plot.py    # 生成交互式Plotly图表
+├── config/
+│   ├── url_covid19.txt                # 新冠疫情数据 URL 列表
+│   └── url_surveillance_new.txt       # 监测数据 URL 列表
 │
-├── config/                         # 配置文件
-│   ├── paths.py                        # 路径配置
-│   ├── url_covid19.txt                 # 新冠疫情数据URL列表
-│   ├── url_surveillance_history.txt    # 历史监测数据URL
-│   └── url_surveillance_new.txt        # 最新监测数据URL
+├── data/
+│   ├── cncdc_surveillance_all.csv     # 全部病原体监测数据
+│   └── cncdc_surveillance_covid19.csv # COVID-19 专项数据
 │
-├── data/                           # 处理后的数据
-│   ├── cncdc_surveillance_all.csv              # 🗄️ 全部病原体监测数据（主文件）
-│   ├── cncdc_surveillance_covid19.csv          # 🦠 COVID-19专项监测数据
-│   ├── covid_only_updated_surveillance_data.csv  # COVID-19专用数据（旧）
-│   ├── updated_surveillance_data.csv             # 完整监测数据（旧）
-│   └── cn_cdc_surveillance.csv                   # 综合监测数据（旧）
+├── update/                            # 增量更新（按日期组织）
+│   └── {reference_date}/
+│       ├── pdf/
+│       ├── md/
+│       └── csv/
 │
-├── update/                         # 📂 增量更新数据目录（按日期组织）
-│   ├── {reference_date}/              # 按参考日期命名的子目录
-│   │   ├── pdf/                       # 该日期的PDF文件
-│   │   │   └── {file_id}.pdf
-│   │   ├── md/                        # 该日期的Markdown文件
-│   │   │   └── {file_id}.md
-│   │   └── csv/                       # 该日期的CSV数据
-│   │       └── {file_id}.csv
-│   └── ...                            # 其他日期的数据
-│
-├── notebooks/                      # Jupyter笔记本
-│   ├── cn_cdc_covid19_model.ipynb      # COVID-19数据分析模型
-│   └── test.ipynb                      # 测试笔记本
-│
-├── model/                          # 模型和图表
-│   └── 2025-09-02.jpg                 # 示例图片
-│
-├── docs/                           # 文档和GitHub Pages
-│   ├── covid19_interactive.html        # 交互式图表页面
-│   ├── INTERACTIVE_CHART_GUIDE.md      # 交互图表完整指南
-│   └── QUICKSTART_INTERACTIVE.md       # 快速启动指南
-│
-└── .github/                        # GitHub Actions
-    └── workflows/
-        └── deploy-docs.yml             # 自动部署工作流
+└── airflow/                           # Airflow 自动化调度
+    └── dags/
+        └── cdc_data_update_dag.py
 ```
 
-## 📋 COVID-19专用数据文件说明
+## 数据格式
 
-### `covid_only_updated_surveillance_data.csv` 
+### COVID-19 专用数据
 
-此文件是专门为 [China-COVID-19-Forecast-Hub](https://github.com/dailypartita/China-COVID-19-Forecast-Hub) 项目定制的COVID-19监测数据文件，包含按周汇总的新冠病毒监测数据。该文件采用标准化的时间序列格式，便于疫情预测模型使用。
+`cncdc_surveillance_covid19.csv` 是为 China-COVID-19-Forecast-Hub 项目定制的数据文件。
 
-**关于China-COVID-19-Forecast-Hub项目**：
-- 这是一个协作预测中心，专门收集和评估中国哨点医院流感样病例(ILI)中SARS-CoV-2阳性率的实时预测
-- 项目于2025年8月21日开始运行，参与者需要在每周三北京时间23:59前提交预测
-- 该平台为比较预测模型和为公共卫生决策提供循证见解提供服务
-- 项目联系邮箱：yang_kaixin@gzlab.ac.cn
+数据列：
+- `reference_date`: 监测周起始日期（周一）
+- `target_end_date`: 监测周结束日期（周日）
+- `report_week`: 年度报告周次
+- `pathogen`: 病原体名称（统一为"新型冠状病毒"）
+- `ili_percent`: 门急诊流感样病例阳性率（%）
+- `sari_percent`: 住院严重急性呼吸道感染病例阳性率（%）
 
-#### 数据列详细说明
+### 综合监测数据
 
-| 列名 | 数据类型 | 描述 | 示例值 | 备注 |
-|------|----------|------|--------|------|
-| `reference_date` | 日期 (YYYY-MM-DD) | 监测周的起始日期（周一） | 2025-09-01 | 每个监测周的参考起点 |
-| `target_end_date` | 日期 (YYYY-MM-DD) | 监测周的结束日期（周日） | 2025-09-07 | 与reference_date构成完整的监测周 |
-| `report_week` | 整数 | 年度报告周次 | 36 | 按照ISO周历系统计算的周次 |
-| `pathogen` | 文本 | 病原体名称 | 新型冠状病毒 | 目前专门针对COVID-19，统一为"新型冠状病毒" |
-| `ili_percent` | 浮点数 | 门急诊流感样病例(ILI)阳性率 | 6.8 | 单位：百分比(%)，表示门急诊就诊的流感样病例中新冠阳性的比例 |
-| `sari_percent` | 浮点数 | 住院严重急性呼吸道感染(SARI)病例阳性率 | 3.7 | 单位：百分比(%)，表示住院SARI病例中新冠阳性的比例 |
+`cncdc_surveillance_all.csv` 包含多种病原体的监测数据，字段包括：
+- `report_date`: 报告发布日期
+- `report_week`: 报告周次
+- `pathogen`: 病原体名称
+- `ili_percent`: 门急诊流感样病例阳性率（%）
+- `sari_percent`: 住院严重急性呼吸道感染病例阳性率（%）
 
-#### 数据特点
+支持的病原体：新型冠状病毒、流感病毒、呼吸道合胞病毒、腺病毒、人偏肺病毒、副流感病毒、普通冠状病毒、博卡病毒、鼻病毒、肠道病毒、肺炎支原体等。
 
-- **时间覆盖范围**：从2024年11月开始的连续监测数据
-- **更新频率**：每周更新，通常在监测周结束后3-7天发布
-- **数据来源**：基于全国哨点医院的监测网络
-- **质量控制**：所有数据均经过中国CDC的标准化验证流程
-- **格式标准**：严格按照 China-COVID-19-Forecast-Hub 项目的数据规范设计
+## Airflow 自动化调度
 
-#### 使用说明
+使用 Airflow 实现定时自动更新，每周日自动执行数据更新。
 
-1. **时间序列分析**：可以使用 `reference_date` 作为时间索引进行趋势分析
-2. **预测模型输入**：`ili_percent` 和 `sari_percent` 是预测模型的核心输入特征  
-3. **周次对齐**：`report_week` 可用于与其他数据源的周度数据进行对齐
-4. **数据验证**：建议使用前检查日期连续性和数值合理性
-5. **Forecast Hub对接**：
-   - 数据格式完全符合China-COVID-19-Forecast-Hub的输入要求
-   - `reference_date`对应预测的基准日期（每周六）
-   - `target_end_date`对应预测目标周的结束日期  
-   - 数据每周更新，支持实时预测和回顾性分析（nowcasting）
-   - 如需将此数据用于其他研究或发表，请联系 yang_kaixin@gzlab.ac.cn 获取数据源归属信息
-
-## 📊 输出数据格式
-
-除了上述COVID-19专用文件外，系统还可以输出包含多种病原体的综合监测数据CSV文件，包含以下字段：
-
-| 字段名 | 描述 | 示例 |
-|--------|------|------|
-| `report_date` | 报告发布日期 | 2025-08-28 |
-| `report_week` | 报告周次 | 2025-34 |
-| `pathogen` | 病原体名称 | 新型冠状病毒 |
-| `ili_percent` | 门急诊流感样病例阳性率(%) | 10.5 |
-| `sari_percent` | 住院严重急性呼吸道感染病例阳性率(%) | 4.3 |
-
-支持的病原体包括：
-- 新型冠状病毒
-- 流感病毒
-- 呼吸道合胞病毒
-- 腺病毒
-- 人偏肺病毒
-- 副流感病毒
-- 普通冠状病毒
-- 博卡病毒
-- 鼻病毒
-- 肠道病毒
-- 肺炎支原体
-
-## ⚙️ 高级配置
-
-### 自定义MinerU服务器
-
-如果你有自己的MinerU部署：
+快速开始：
 
 ```bash
-# 方法1：环境变量
-export MINERU_API="http://your-mineru-server:port"
-
-# 方法2：命令行参数
-uv run convert_pdf_to_md.py input.pdf --server http://your-mineru-server:port
-```
-
-### 批处理优化
-
-对于大批量数据处理，建议：
-
-1. **调整并发数**：根据服务器性能调整 `--workers` 和 `--concurrency` 参数
-2. **增加超时时间**：复杂PDF可能需要更长处理时间 `--timeout 300`
-3. **分批处理**：将大量URL分成小批次处理，避免资源耗尽
-
-### 错误处理和重试
-
-所有工具都支持自动重试机制：
-- PDF转换支持失败重试（默认3次）
-- 网页抓取支持多种等待策略回退
-- 数据提取支持跳过损坏文件继续处理
-
-## 🤖 Airflow 自动化调度
-
-想要实现数据的自动定时更新？本项目已支持 Airflow 部署！
-
-### 特性
-
-- ✅ **自动调度**：每周三上午10点自动执行数据更新
-- ✅ **可视化监控**：Web UI 实时查看任务状态
-- ✅ **失败重试**：自动重试失败的任务，并发送邮件通知
-- ✅ **任务编排**：清晰的 DAG 图展示数据处理流程
-- ✅ **日志管理**：集中管理所有任务日志
-
-### 快速开始
-
-```bash
-# 进入 airflow 目录
 cd airflow
-
-# 一键启动（需要 Docker）
 ./quick_start.sh
 
-# 访问 Web UI
-# http://localhost:8080
+# 访问 http://localhost:8080
 # 用户名: airflow, 密码: airflow
 ```
 
-### 详细文档
+详细文档：
+- [快速上手](airflow/QUICKSTART_zh.md)
+- [部署指南](airflow/README_AIRFLOW.md)
 
-- [5分钟快速上手](airflow/QUICKSTART_zh.md) - 快速部署和使用
-- [完整部署指南](airflow/README_AIRFLOW.md) - 详细配置和故障排查
-- [部署总结](airflow/部署总结.md) - 架构说明和使用流程
+## ⚠️ 注意事项
 
----
+### 2025年14-22周数据说明
 
-## 🐛 常见问题
+**重要提醒**：在 2025 年第 14-22 周期间，CDC 使用了月报形式进行更新。这部分数据中：
+- 只有新冠数据是手动更新的（见 `data/cncdc_suverillance_2025_14_22.csv`）
+- 其余病原体数据需要参考 CDC 官网获取
 
-### 1. MinerU连接失败
+### 数据更新策略
 
-**问题**：无法连接到MinerU服务器
-**解决**：
-- 确认MinerU服务正在运行
-- 检查防火墙设置
-- 验证API端点地址是否正确
+**推荐使用增量更新模式**：
+- 使用 `--append` 参数时，新数据会自动合并到已有文件
+- 系统会自动去重，只保留最新的数据
+- **不会覆盖之前已经存在的数据**，只更新最新的数据
+- 如果输出文件已存在，建议使用 `--append` 模式
 
-### 2. PDF转换质量差
+### 其他注意事项
 
-**问题**：转换后的Markdown文件表格混乱
-**解决**：
-- 启用表格识别：`--table-enable true`
-- 调整解析方法：`--parse-method ocr` 或 `--parse-method txt`
-- 检查原始PDF质量
+- 有时候 MinerU 的 VLM 视觉方案可能会忽略小数点，比如把 1.5 识别成 15。因此会不定期进行人工审核，确保数据准确性。
+- 如果发现问题，欢迎提交 Issue。
 
-### 3. 数据提取不完整
+## 常见问题
 
-**问题**：CSV输出缺少某些数据行
-**解决**：
-- 启用调试模式：`--debug`
-- 检查Markdown文件中表格格式
-- 尝试启用LLM增强提取
+**MinerU 连接失败**
+- 确认 MinerU 服务正在运行
+- 检查防火墙设置和 API 地址
+- OSS 模式需要确保 ossutil 已配置
 
-### 4. 内存不足
+**PDF 转换质量差**
+- 尝试启用表格识别：`--table-enable true`
+- 使用 OSS 模式 + VLM 模型通常效果更好
+- 检查原始 PDF 质量
 
-**问题**：处理大量文件时内存耗尽
-**解决**：
+**数据提取不完整**
+- 使用 `--debug` 模式查看详细信息
+- 检查 Markdown 文件中表格格式
+- 查看提取工具的输出日志
+
+**内存不足**
 - 减少并发数：`--workers 2`
 - 分批处理文件
-- 增加系统虚拟内存
 
-## 🌐 启用交互式图表（GitHub Pages）
+## 开源说明
 
-要在你的 GitHub 仓库中展示交互式图表，请按照以下步骤操作：
+代码和数据完全开源。数据会定期上传到 GitHub。如果觉得有用，欢迎点个 star。
 
-### 快速启用
+## 贡献
 
-1. **推送代码到 GitHub**：
-   ```bash
-   git add .
-   git commit -m "添加交互式图表"
-   git push origin main
-   ```
+欢迎提交 Issue 和 Pull Request！
 
-2. **在 GitHub 仓库设置中启用 Pages**：
-   - 进入仓库的 **Settings** → **Pages**
-   - **Source** 选择 `GitHub Actions`
-   - 保存设置
+## 许可证
 
-3. **访问交互式图表**：
-   - 部署完成后（约1-2分钟），访问：
-   - `https://<你的用户名>.github.io/<仓库名>/covid19_interactive.html`
+MIT License，详见 [LICENSE](LICENSE) 文件。
 
-详细设置说明请查看 [docs/SETUP.md](docs/SETUP.md)
+## 致谢
 
-### 更新图表
-
-当数据更新后，重新生成并推送：
-
-```bash
-# 生成新的交互式图表
-uv run python src/generate_interactive_plot.py
-
-# 提交更改
-git add docs/covid19_interactive.html data/covid_only_updated_surveillance_data.csv
-git commit -m "更新监测数据"
-git push origin main
-```
-
-GitHub Actions 会自动重新部署更新后的图表。
-
-## 🤝 贡献指南
-
-欢迎提交Issue和Pull Request！
-
-1. Fork 本仓库
-2. 创建特性分支：`git checkout -b feature/AmazingFeature`
-3. 提交修改：`git commit -m 'Add some AmazingFeature'`
-4. 推送分支：`git push origin feature/AmazingFeature`
-5. 提交Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证，详见 [LICENSE](LICENSE) 文件。
-
-## 🙏 致谢
-
-- [MinerU](https://github.com/opendatalab/MinerU) - 强大的PDF解析工具
-- [Playwright](https://playwright.dev/) - 现代浏览器自动化
-- [LangChain](https://python.langchain.com/) - LLM应用开发框架
+- [MinerU](https://github.com/opendatalab/MinerU) - PDF 解析工具
+- [Playwright](https://playwright.dev/) - 浏览器自动化
 - 中国疾病预防控制中心 - 数据源
 
-## 📮 联系方式
+## 联系方式
 
-如有问题或建议，请通过以下方式联系：
-
-- 提交GitHub Issue
-- 发送邮件至：[yang_kaixin@gzlab.ac.cn]
+- GitHub Issue
+- 邮箱：yang_kaixin@gzlab.ac.cn
 
 ---
 
-**免责声明**：本工具仅用于学术研究和个人学习目的。使用时请遵守中国疾控中心网站的使用条款和相关法律法规。请合理使用爬虫工具，避免对目标网站造成过大负担。
+**免责声明**：本工具仅用于学术研究和个人学习。使用时请遵守相关法律法规，合理使用爬虫工具。

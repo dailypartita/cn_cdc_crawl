@@ -271,8 +271,18 @@ def main():
     parser.add_argument("--covid-only", action="store_true", help="只输出新冠病毒数据")
     parser.add_argument("--debug", action="store_true", help="显示调试信息")
     parser.add_argument("--max-workers", type=int, default=4, help="并发处理线程数")
+    parser.add_argument("--append", action="store_true", help="增量更新模式：合并到已有文件，不覆盖旧数据")
     
     args = parser.parse_args()
+    
+    # ⚠️ 重要提醒：2025年14-22周数据说明
+    print("\n" + "="*60)
+    print("⚠️  重要提醒：2025年14-22周数据说明")
+    print("="*60)
+    print("在2025年第14-22周期间，CDC使用了月报形式进行更新。")
+    print("这部分数据中，只有新冠数据是手动更新的，")
+    print("其余病原体数据需要参考CDC官网获取。")
+    print("="*60 + "\n")
     
     # 查找所有markdown文件
     input_path = Path(args.input)
@@ -321,8 +331,36 @@ def main():
     df = df.sort_values(['reference_date', 'pathogen'], ascending=[False, True])
     df['reference_date'] = df['reference_date'].dt.strftime('%Y-%m-%d')
     
-    # 保存完整数据
+    # 增量更新模式：合并到已有文件
     output_path = Path(args.output)
+    if args.append and output_path.exists():
+        print(f"读取已有文件: {output_path}")
+        try:
+            existing_df = pd.read_csv(output_path, encoding='utf-8-sig')
+            # 确保列一致
+            for col in df.columns:
+                if col not in existing_df.columns:
+                    existing_df[col] = None
+            # 合并数据
+            combined_df = pd.concat([existing_df, df], ignore_index=True)
+            # 去重：基于 reference_date, target_end_date, report_week, pathogen 的组合
+            # 保留最新的数据（基于reference_date排序后的最后一条）
+            combined_df['reference_date_dt'] = pd.to_datetime(combined_df['reference_date'], errors='coerce')
+            combined_df = combined_df.sort_values('reference_date_dt', ascending=False, na_position='last')
+            # 去重，保留第一条（即最新的）
+            dedup_cols = ['reference_date', 'target_end_date', 'report_week', 'pathogen']
+            combined_df = combined_df.drop_duplicates(subset=dedup_cols, keep='first')
+            combined_df = combined_df.drop(columns=['reference_date_dt'])
+            df = combined_df
+            # 重新排序
+            df['reference_date'] = pd.to_datetime(df['reference_date'], errors='coerce')
+            df = df.sort_values(['reference_date', 'pathogen'], ascending=[False, True])
+            df['reference_date'] = df['reference_date'].dt.strftime('%Y-%m-%d')
+            print(f"已合并到已有文件，去重后共 {len(df)} 行数据")
+        except Exception as e:
+            print(f"⚠️  读取已有文件失败，将覆盖文件: {e}")
+    
+    # 保存完整数据
     # 确保输出目录存在
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_path, index=False, encoding='utf-8-sig')
