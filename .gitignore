@@ -1,8 +1,29 @@
-# airflow
+# ============================================
+# CLOSED SOURCE: Exclude all code and configs
+# ============================================
+# Source code
+src/
 airflow/
-airflow/config/airflow_variables.json
 
-# Python
+# Configuration files
+config/
+pyproject.toml
+requirements.txt
+uv.lock
+
+# Intermediate processing files
+update/
+data/md/
+data/pdf/
+
+# ============================================
+# KEEP: Data files only
+# ============================================
+# Keep: data/*.csv (the actual surveillance data)
+
+# ============================================
+# Standard Python ignores
+# ============================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -48,11 +69,6 @@ ENV/
 *.tmp
 .cache/
 
-# Data files (keep structure, ignore large files)
-data/raw/*.pdf
-data/raw/*.html
-data/processed/*.backup
-
 # Output directories
 pdf_out/
 md_out/
@@ -65,7 +81,3 @@ md_out/
 .pytest_cache/
 .coverage
 htmlcov/
-
-# uv
-uv.lock
-.env
