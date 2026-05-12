@@ -12,7 +12,6 @@ requirements.txt
 uv.lock
 
 # Intermediate processing files
-update/
 data/md/
 data/pdf/
 
