@@ -6,25 +6,9 @@ Automated weekly extraction of respiratory disease surveillance data from China 
 
 <!-- COVID_CHART_START -->
 <p align="center">
-  <em>SARS-CoV-2 weekly ILI positivity rate — <strong>5-week moving average</strong>. Hover · zoom · drag to select range.</em>
-</p>
-<div align="center">
-  <iframe
-    src="https://render.githubusercontent.com/view/html?url=https://raw.githubusercontent.com/dailypartita/cn_cdc_crawl/main/docs/covid_ili_chart.html"
-    width="920"
-    height="580"
-    style="border:0;max-width:100%;border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.08);"
-    loading="lazy"
-    title="COVID-19 ILI positivity rate chart">
-  </iframe>
-</div>
-<p align="center">
-  <em>若上方无法显示，请查看
-  <a href="docs/covid_ili_chart.html">docs/covid_ili_chart.html</a>
-  或静态预览：</em>
-</p>
-<p align="center">
-  <img src="docs/chart_preview.png" width="900" alt="COVID ILI chart preview"/>
+  <img src="docs/chart_preview.png" width="900" alt="SARS-CoV-2 weekly ILI positivity rate (5-week moving average)"/>
+  <br/>
+  <em>SARS-CoV-2 weekly ILI positivity rate at sentinel hospitals — <strong>5-week moving average</strong> (CDC sentinel convention).</em>
 </p>
 <!-- COVID_CHART_END -->
 
@@ -37,7 +21,7 @@ flowchart LR
     C -->|MinerU OCR| D[Markdown<br/>Document]
     D -->|LLM extract| E[Structured<br/>CSV Records]
     E -->|dedup + merge| F[(Main<br/>Datasets)]
-    F -->|chart refresh| H[Interactive<br/>ILI Chart]
+    F -->|chart refresh| H[ILI Chart<br/>PNG]
     F -->|auto commit| G([GitHub<br/>Release])
     H --> G
 ```
