@@ -5,9 +5,11 @@ Automated weekly extraction of respiratory disease surveillance data from China 
 ## Latest Snapshot
 
 <p align="center">
-  <img src="docs/2026-08-31.jpg" alt="SARS-CoV-2 weekly positivity rate (ILI vs SARI), Dec 2022 – Aug 2026" width="900"/>
+  <a href="https://dailypartita.github.io/cn_cdc_crawl/covid_ili_chart.html">
+    <img src="docs/chart_preview.jpg" alt="SARS-CoV-2 weekly ILI positivity rate" width="900"/>
+  </a>
   <br/>
-  <em>SARS-CoV-2 weekly positivity rate at sentinel hospitals — outpatient ILI (blue) vs. inpatient SARI (red), Dec 2022 – Aug 2026. ILI history backfilled from curated records; SARI available from Nov 2024.</em>
+  <em>SARS-CoV-2 weekly ILI positivity rate at sentinel hospitals (5-week moving average). Click the chart for the <a href="https://dailypartita.github.io/cn_cdc_crawl/covid_ili_chart.html">interactive version</a> — it loads the latest CSV dynamically.</em>
 </p>
 
 ## Data Pipeline
@@ -19,7 +21,9 @@ flowchart LR
     C -->|MinerU OCR| D[Markdown<br/>Document]
     D -->|LLM extract| E[Structured<br/>CSV Records]
     E -->|dedup + merge| F[(Main<br/>Datasets)]
+    F -->|chart refresh| H[Interactive<br/>ILI Chart]
     F -->|auto commit| G([GitHub<br/>Release])
+    H --> G
 ```
 
 Orchestrated by Apache Airflow — runs every Friday at 00:00 (Asia/Shanghai) and only commits when new reports are detected.
