@@ -76,6 +76,10 @@ md_out/
 .env
 .env.local
 
+# Confidential local files
+新冠阳性率与舆情指数数据.xlsx
+*.xlsx
+
 # Testing
 .pytest_cache/
 .coverage

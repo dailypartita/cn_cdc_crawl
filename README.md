@@ -5,9 +5,9 @@ Automated weekly extraction of respiratory disease surveillance data from China 
 ## Latest Snapshot
 
 <p align="center">
-  <img src="docs/2026-08-28.jpg" alt="SARS-CoV-2 weekly positivity rate (ILI vs SARI), Nov 2024 – Aug 2026" width="900"/>
+  <img src="docs/2026-08-31.jpg" alt="SARS-CoV-2 weekly positivity rate (ILI vs SARI), Dec 2022 – Aug 2026" width="900"/>
   <br/>
-  <em>SARS-CoV-2 weekly positivity rate at sentinel hospitals — outpatient ILI (blue) vs. inpatient SARI (red), Nov 2024 – Aug 2026.</em>
+  <em>SARS-CoV-2 weekly positivity rate at sentinel hospitals — outpatient ILI (blue) vs. inpatient SARI (red), Dec 2022 – Aug 2026. ILI history backfilled from curated records; SARI available from Nov 2024.</em>
 </p>
 
 ## Data Pipeline
