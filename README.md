@@ -5,11 +5,11 @@ Automated weekly extraction of respiratory disease surveillance data from China 
 ## Latest Snapshot
 
 <p align="center">
-  <a href="https://dailypartita.github.io/cn_cdc_crawl/covid_ili_chart.html">
-    <img src="docs/chart_preview.jpg" alt="SARS-CoV-2 weekly ILI positivity rate" width="900"/>
+  <a href="https://dailypartita.github.io/cn_cdc_crawl/">
+    <img src="docs/chart_preview.png" alt="SARS-CoV-2 weekly ILI positivity rate (5-week moving average)" width="900"/>
   </a>
   <br/>
-  <em>SARS-CoV-2 weekly ILI positivity rate at sentinel hospitals (5-week moving average). Click the chart for the <a href="https://dailypartita.github.io/cn_cdc_crawl/covid_ili_chart.html">interactive version</a> — it loads the latest CSV dynamically.</em>
+  <em>SARS-CoV-2 weekly ILI positivity rate at sentinel hospitals — <strong>5-week moving average</strong> (CDC sentinel surveillance convention). Click for the <a href="https://dailypartita.github.io/cn_cdc_crawl/">interactive chart</a> (hover, zoom, time-range selector; loads latest CSV dynamically).</em>
 </p>
 
 ## Data Pipeline
