@@ -6,9 +6,9 @@ Automated weekly extraction of respiratory disease surveillance data from China 
 
 <!-- COVID_CHART_START -->
 <p align="center">
-  <img src="docs/chart_preview.png?v=20260824" width="900" alt="SARS-CoV-2 weekly ILI positivity rate (5-week moving average)"/>
+  <img src="docs/chart_preview.png?v=20260831" width="900" alt="SARS-CoV-2 weekly ILI positivity rate (5-week moving average)"/>
   <br/>
-  <em>SARS-CoV-2 weekly ILI positivity rate at sentinel hospitals — <strong>5-week moving average</strong> (CDC sentinel convention). Latest week: 2026-08-24.</em>
+  <em>SARS-CoV-2 weekly ILI positivity rate at sentinel hospitals — <strong>5-week moving average</strong> (CDC sentinel convention). Latest week: 2026-08-31.</em>
 </p>
 <!-- COVID_CHART_END -->
 
